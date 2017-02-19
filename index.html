@@ -1,0 +1,52 @@
+<html>
+    <head>
+        <title>Elm Simon</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.2.0/milligram.min.css">
+    </head>
+    <body style="background-color: #ddd;">
+        <div id="main"></div>
+        <script src="Main.js"></script>
+        <script>
+            var app = Elm.Main.fullscreen();
+
+            app.ports.send.subscribe(play);
+            app.ports.blink.subscribe(changeColor);
+
+            var ctx = new window.webkitAudioContext || window.AudioContext;
+
+            function play(args) {   
+                console.log(args)         
+                var note = args.note;
+                var tempo = args.tempo;
+                var waveType = "square";
+                var hz = note.hz;
+                var octave = note.octave;
+                var sustain = note.duration;
+                var sustainFnl = sustain * tempo;
+
+                var osc = ctx.createOscillator();
+                var gainNode = ctx.createGain();
+                osc.connect(gainNode);
+                gainNode.connect(ctx.destination);
+
+                gainNode.gain.value = 0.0;
+                gainNode.gain.setTargetAtTime(0.75, ctx.currentTime, 0.1);
+                gainNode.gain.setTargetAtTime(0.0, ctx.currentTime + sustainFnl, 0.01);
+                osc.frequency.value = hz * octave / 4;
+                osc.type = waveType;
+                osc.start();
+                osc.stop(ctx.currentTime + sustainFnl + 0.01);
+            }
+
+            function changeColor(id) {
+                var id = String(id);
+                var el = document.getElementById(id);
+                el.style.transition = "transform .3s";
+                el.style.transform = "scale(2,2)";
+                setTimeout( function() {
+                    el.style.transform = "scale(1,1)";
+                }, 500);   
+            }
+        </script>
+    </body>
+</html>
