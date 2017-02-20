@@ -31,6 +31,7 @@ type alias Model =
     , bpm : Int
     , score : Int
     , gameOn : Bool
+    , playersTurn : Bool
     }
 
 
@@ -48,13 +49,14 @@ type alias PlayBundle =
 
 
 model =
-    { noteOptions = ["CQ4", "D#Q4", "FQ4", "GQ4", "A#Q4", "CQ5"]
+    { noteOptions = [ "cq4", "d#q4", "fq4", "gq4", "a#q4", "cq5" ]
     , computerNotes = []
     , playerNotes = []
     , index = 0
     , bpm = 80
     , score = 0
     , gameOn = False
+    , playersTurn = False
     }
 
 
@@ -76,7 +78,7 @@ type Msg
     | AddNoteToComputerNotes Int
     | AcceptNotesFromPlayer Int
     | CompareResults
-    | SendNotes
+    | SendNotes Int
     | LightUpDiv Int
 
 update msg model =
@@ -88,6 +90,7 @@ update msg model =
                 , index = 0
                 , playerNotes = []
                 , score = 0
+                , bpm = 80
                 , gameOn = True 
                 }, Cmd.none )
                     :> update GenerateRandomNote
@@ -100,8 +103,9 @@ update msg model =
                 noteList =
                     [ index ]
             in
-                ( { model | computerNotes = model.computerNotes ++ noteList }, Cmd.none)
+                ( { model | computerNotes = model.computerNotes ++ noteList, index = 0, playerNotes = []}, Cmd.none)
                     :> update (LightUpDiv index)
+                    :> update (SendNotes index)
 
         LightUpDiv id ->
             (model, blink id)
@@ -111,33 +115,50 @@ update msg model =
                 noteList =
                     [ id ]
             in
-                ( { model | playerNotes = model.playerNotes ++ noteList }, Cmd.none )
+                ( { model | playerNotes = model.playerNotes ++ noteList, playersTurn = True }, Cmd.none )
                     :> update (LightUpDiv id)
+                    :> update (SendNotes id)
                     :> update CompareResults
 
         CompareResults ->
             if
-                getAt model.index model.playerNotes == getAt model.index model.playerNotes
+                model.playerNotes == model.computerNotes
             then
-                ({ model | score = model.score + 10, index = model.index + 1, bpm = model.bpm + 5 }, Cmd.none)
+                ({ model | score = model.score + 10, index = model.index + 1, bpm = model.bpm + 10 }, Cmd.none)
                     :> update GenerateRandomNote
 
             else
                 (model, Cmd.none)
-                    :> update StartGame
+                    --:> update StartGame
 
 
-        SendNotes -> 
-            let
-                index =
-                    getAt model.index model.computerNotes
+        SendNotes id -> 
+            if model.playersTurn == False
+                then
+                    let
+                        _ = Debug.log "playersTurn False"
+                        index =
+                            getAt id model.computerNotes
 
-                note =
-                    getAt (Maybe.withDefault 0 index) model.noteOptions
-            in
-                ( { model | index = model.index +1, bpm = model.bpm + 5}
-                , send (PlayBundle (noteSorter <| Maybe.withDefault "CQ4" note) (tempo model.bpm)))
-                
+                        note =
+                            getAt (Maybe.withDefault 0 index) model.noteOptions
+                    in
+                        ( { model | index = model.index +1}
+                        , send (PlayBundle (noteSorter <| Maybe.withDefault "cq4" note) (tempo model.bpm)))
+                            :> update (LightUpDiv (Maybe.withDefault 1 index))
+
+            else
+                let 
+                    _ = Debug.log "playersTurn True"
+                    index =
+                            getAt id model.playerNotes
+
+                    note =
+                        getAt (Maybe.withDefault 0 index) model.noteOptions
+                in
+                    ( { model | playersTurn = False}
+                    , send (PlayBundle (noteSorter <| Maybe.withDefault "cq4" note) (tempo model.bpm)))
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -145,9 +166,9 @@ subscriptions model =
       then 
          let 
             speed =
-               tempo model.bpm       
+               (tempo model.bpm) * 4       
          in
-            Time.every (speed * second) (always SendNotes)
+            Time.every (speed * second) (always (SendNotes model.index))
     else Sub.none
 
 
@@ -269,7 +290,8 @@ view model =
             , colorNoteDiv 6 "purple"
             ]
         , div [] [text ("computerNotes: " ++ Basics.toString model.computerNotes)]
-        , div [] [text ("playerNotes: " ++ Basics.toString model.playerNotes)]        
+        , div [] [text ("playerNotes: " ++ Basics.toString model.playerNotes)]  
+        , div [] [text ("index: " ++ Basics.toString model.index)]      
         , score model
         ]
 
