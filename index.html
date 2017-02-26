@@ -15,7 +15,6 @@
             var ctx = new window.webkitAudioContext || window.AudioContext;
 
             function play(args) {   
-                console.log(args)         
                 var note = args.note;
                 var tempo = args.tempo;
                 var waveType = "square";
@@ -41,13 +40,12 @@
             function changeColor(id) {
                 var id = String(id);
                 var el = document.getElementById(id);
-                // el.style.transition = "transform .15s, opacity .15s";
-                // el.style.transform = "scale(0.5,5)";
                 color = el.style.borderColor;
-                el.style.transition = "backgroundColor 0.3s";
+                el.style.transition = "opacity 0.5s ease-in";
                 el.style.backgroundColor = color;
+                el.style.opacity = 0.25;
                 setTimeout( function() {
-                    // el.style.transform = "scale(1,1)";
+                    el.style.opacity = 1;
                     el.style.backgroundColor = "#111";
                 }, 500);   
             }

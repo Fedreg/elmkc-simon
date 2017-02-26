@@ -8,9 +8,9 @@ import List.Extra exposing (getAt)
 import Time exposing (..)
 import Update.Extra.Infix exposing ((:>))
 import Random
-import Debug exposing (log)
 import Task exposing (succeed)
 import Process exposing (sleep)
+
 
 main =
     Html.program
@@ -19,6 +19,7 @@ main =
         , view = view
         , subscriptions = subscriptions
         }
+
 
 
 --MODEL
@@ -74,6 +75,8 @@ init =
 
 
 port send : PlayBundle -> Cmd msg
+
+
 port blink : Int -> Cmd msg
 
 
@@ -86,126 +89,124 @@ type Msg
     | SendNotes
     | LightUpDiv Int
 
-update msg model =
-    case msg of 
 
+update msg model =
+    case msg of
         StartGame ->
-            ( { model | 
-                computerNotes = []
+            ( { model
+                | computerNotes = []
                 , playerNotes = []
                 , computerNoteIndex = 0
                 , playerNoteIndex = 0
                 , score = 0
                 , bpm = 160
-                , gameOn = True 
-                }, Cmd.none )
-                    :> update GenerateRandomNote
-        
+                , gameOn = True
+              }
+            , Cmd.none
+            )
+                :> update GenerateRandomNote
+
         GenerateRandomNote ->
-            (  model, Random.generate AddNoteToComputerNotes (Random.int 1 6 ) )
+            ( model, Random.generate AddNoteToComputerNotes (Random.int 1 6) )
 
         AddNoteToComputerNotes index ->
-            let 
+            let
                 noteList =
                     [ index ]
-
             in
-                ( { model | computerNotes = model.computerNotes ++ noteList, computerNoteIndex = 0, playerNotes = [] }, Cmd.none)
+                ( { model | computerNotes = model.computerNotes ++ noteList, computerNoteIndex = 0, playerNotes = [] }, Cmd.none )
                     --:> update (LightUpDiv index)
-                    :> update SendNotes
+                    :>
+                        update SendNotes
 
         LightUpDiv id ->
-            (model, blink id)
+            ( model, blink id )
 
         AcceptNotesFromPlayer id ->
             let
                 noteList =
                     [ id ]
             in
-                ( { model | playerNotes = model.playerNotes ++ noteList, playersTurn = True}, Cmd.none )
+                ( { model | playerNotes = model.playerNotes ++ noteList, playersTurn = True }, Cmd.none )
                     :> update (LightUpDiv id)
                     :> update SendNotes
                     :> update CompareResults
 
         CompareResults ->
-            if
-                model.playerNotes == model.computerNotes
-            then
-                ({ model | bpm = model.bpm + 10, score = model.score + 1 }, delayCmd)
-
+            if model.playerNotes == model.computerNotes then
+                ( { model | bpm = model.bpm + 10, score = model.score + 1 }, delayCmd )
+            else if getAt (model.playerNoteIndex - 1) model.playerNotes /= getAt (model.playerNoteIndex - 1)  model.computerNotes then
+                ( { model | gameOn = False }, Cmd.none )
             else
-                (model, Cmd.none)
-                    --:> update StartGame
+                ( model, Cmd.none )
 
-
-        SendNotes -> 
-            if model.playersTurn == False
-                then
-                    let
-                        position =
-                            getAt model.computerNoteIndex model.computerNotes
-
-                        position2 =
-                            getAt (model.computerNoteIndex - 1) model.computerNotes
-                        
-                        note =
-                            getAt (Maybe.withDefault 0 position) model.noteOptions
-
-                        note2 =
-                            getAt (Maybe.withDefault 0 position) model.noteOptions2
-                    in
-                        ( { model | computerNoteIndex = model.computerNoteIndex +1, playersTurn = True, playerNoteIndex = 0}
-                        , Cmd.batch [ send (PlayBundle (noteSorter <| Maybe.withDefault "cq4" note) (tempo model.bpm))
-                        , send (PlayBundle (noteSorter <| Maybe.withDefault "cq4" note2) (tempo model.bpm))] )
-                            :> update (LightUpDiv (Maybe.withDefault 1 position))
-
-            else
-                let 
+        --:> update StartGame
+        SendNotes ->
+            if model.playersTurn == False then
+                let
                     position =
-                            getAt model.playerNoteIndex model.playerNotes
-
-                    position2 =
-                            getAt (model.playerNoteIndex - 1) model.playerNotes
+                        getAt model.computerNoteIndex model.computerNotes
 
                     note =
-                        getAt (Maybe.withDefault 0 position)  model.noteOptions
+                        getAt (Maybe.withDefault 0 position) model.noteOptions
 
                     note2 =
                         getAt (Maybe.withDefault 0 position) model.noteOptions2
+                in
+                    ( { model | computerNoteIndex = model.computerNoteIndex + 1, playersTurn = True, playerNoteIndex = 0 }
+                    , Cmd.batch
+                        [ send (PlayBundle (noteSorter <| Maybe.withDefault "cq4" note) (tempo model.bpm))
+                        , send (PlayBundle (noteSorter <| Maybe.withDefault "cq4" note2) (tempo model.bpm))
+                        ]
+                    )
+                        :> update (LightUpDiv (Maybe.withDefault 1 position))
+            else
+                let
+                    position =
+                        getAt model.playerNoteIndex model.playerNotes
 
+                    note =
+                        getAt (Maybe.withDefault 0 position) model.noteOptions
+
+                    note2 =
+                        getAt (Maybe.withDefault 0 position) model.noteOptions2
                 in
                     ( { model | playerNoteIndex = model.playerNoteIndex + 1, playersTurn = False }
-                    , Cmd.batch [ send (PlayBundle (noteSorter <| Maybe.withDefault "cq4" note) (tempo model.bpm))
-                    , send (PlayBundle (noteSorter <| Maybe.withDefault "cq4" note2) (tempo model.bpm))])
+                    , Cmd.batch
+                        [ send (PlayBundle (noteSorter <| Maybe.withDefault "cq4" note) (tempo model.bpm))
+                        , send (PlayBundle (noteSorter <| Maybe.withDefault "cq4" note2) (tempo model.bpm))
+                        ]
+                    )
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if model.gameOn == True && model.computerNoteIndex < List.length model.computerNotes
-      then 
-         let 
+    if model.gameOn == True && model.computerNoteIndex < List.length model.computerNotes then
+        let
             speed =
-               tempo model.bpm       
-         in
+                tempo model.bpm
+        in
             Time.every (speed * second) (always SendNotes)
-    else Sub.none
+    else
+        Sub.none
 
 
 noteSorter : String -> Note
 noteSorter string =
-    let 
-        _ = Debug.log "Note_" string
+    let
+        _ =
+            Debug.log "Note_" string
     in
         case (String.length string) of
             3 ->
                 Note (frequencies (slice 0 1 string)) (sustain (slice 1 2 string)) (octave (Result.withDefault 0 (toInt (slice 2 3 string))))
-                    
+
             4 ->
                 Note (frequencies (slice 0 2 string)) (sustain (slice 2 3 string)) (octave (Result.withDefault 0 (toInt (slice 3 4 string))))
-                    
+
             _ ->
-                Note 0.0 0.0 0 
-                
+                Note 0.0 0.0 0
+
 
 sustain : String -> Float
 sustain duration =
@@ -283,59 +284,70 @@ frequencies note =
 
         _ ->
             0.0
-       --Formula for determining frequencies in hz
-       --110 * (1.059463..)^n
+
+
+
+--Formula for determining frequencies in hz
+--110 * (1.059463..)^n
 
 
 tempo : Int -> Float
 tempo bpm =
     (Basics.toFloat 60 / Basics.toFloat bpm) * 0.5
 
-delayCmd = 
-   Task.perform identity (Process.sleep (1 * Time.second) 
-      |> Task.andThen ( \() -> Task.succeed GenerateRandomNote ))
+
+delayCmd =
+    Task.perform identity
+        (Process.sleep (1 * Time.second)
+            |> Task.andThen (\() -> Task.succeed GenerateRandomNote)
+        )
+
+
 
 -- VIEW
 
 
 view : Model -> Html Msg
 view model =
-    div [ style [ ( "textAlign", "center" ), ("color", "#555") ] ]
+    div [ style [ ( "textAlign", "center" ), ( "color", "#555" ) ] ]
         [ h1 [ style [ ( "textDecoration", "underline" ), ( "margin", "150px auto 50px" ) ] ] [ text "Elm Simon" ]
         , button [ onClick StartGame, myStyles ] [ text "Start Game" ]
-        , div [ style [ ("display", "flex")] ]
-            [ colorNoteDiv 1 "red"
-            , colorNoteDiv 2 "blue"
-            , colorNoteDiv 3 "yellow"
-            , colorNoteDiv 4 "green"
-            , colorNoteDiv 5 "orange"
-            , colorNoteDiv 6 "purple"
+        , div [ style [ ( "display", "flex" ) ] ]
+            [ colorNoteDiv 1 "#E8F1F2"
+            , colorNoteDiv 2 "#8338EC"
+            , colorNoteDiv 3 "#3A86FF"
+            , colorNoteDiv 4 "#FF006E"
+            , colorNoteDiv 5 "#FFBE0B"
+            , colorNoteDiv 6 "#FB5607"
             ]
-        , div [] [text ("computerNotes: " ++ Basics.toString model.computerNotes ++ "   computerNoteIndex: "  ++ Basics.toString model.computerNoteIndex)]
-        , div [] [text ("playerNotes: " ++ Basics.toString model.playerNotes ++ "   playerNoteIndex: "  ++ Basics.toString model.playerNoteIndex)]  
         , score model
         ]
 
-colorNoteDiv: Int -> String -> Html Msg
+
+colorNoteDiv : Int -> String -> Html Msg
 colorNoteDiv index color =
-    div [ id (Basics.toString index), style [ ( "width", "30%"), ("height", "50px"), ("border", "3px solid " ++ color), ("borderRadius", "7px"), ("margin", "25px") ]
-        , onClick (AcceptNotesFromPlayer index)] 
+    div
+        [ id (Basics.toString index)
+        , style [ ( "width", "30%" ), ( "height", "50px" ), ( "border", "3px solid " ++ color ), ( "borderRadius", "7px" ), ( "margin", "25px" ) ]
+        , onClick (AcceptNotesFromPlayer index)
+        ]
         []
 
+
 score model =
-    if 
-        model.gameOn == True 
-        then
-            h2 [ style [ ("margin", "0 auto" ) ] ] [ text ("Score: " ++ Basics.toString model.score) ]
+    if
+        model.gameOn== True        
+    then
+        h2 [ style [ ( "margin", "0 auto" ) ] ] [ text ("Score: " ++ Basics.toString model.score) ]
     else
-        h2 [ style [ ("margin", "0 auto" ) ] ] [ text "Game Over!"]
+        h2 [ style [ ( "margin", "0 auto" ), ( "color", "#E8F1F2" ) ] ] [ text ("Game Over! Score: " ++ Basics.toString model.score) ]
+
 
 myStyles : Attribute msg
 myStyles =
-   style
-      [ ("backgroundColor", "#111")
-      , ("color", "#555")
-      , ("border", "1px solid #777")
-      , ("margin", " 1rem 20px")
-      ]
-
+    style
+        [ ( "backgroundColor", "#111" )
+        , ( "color", "#555" )
+        , ( "border", "1px solid #777" )
+        , ( "margin", " 1rem 20px" )
+        ]
