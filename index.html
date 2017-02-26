@@ -3,7 +3,7 @@
         <title>Elm Simon</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.2.0/milligram.min.css">
     </head>
-    <body style="background-color: #ddd;">
+    <body style="background-color: #111;">
         <div id="main"></div>
         <script src="Main.js"></script>
         <script>
@@ -41,10 +41,14 @@
             function changeColor(id) {
                 var id = String(id);
                 var el = document.getElementById(id);
-                el.style.transition = "transform .15s";
-                el.style.transform = "scale(2,2)";
+                // el.style.transition = "transform .15s, opacity .15s";
+                // el.style.transform = "scale(0.5,5)";
+                color = el.style.borderColor;
+                el.style.transition = "backgroundColor 0.3s";
+                el.style.backgroundColor = color;
                 setTimeout( function() {
-                    el.style.transform = "scale(1,1)";
+                    // el.style.transform = "scale(1,1)";
+                    el.style.backgroundColor = "#111";
                 }, 500);   
             }
         </script>
