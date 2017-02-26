@@ -26,6 +26,7 @@ main =
 
 type alias Model =
     { noteOptions : List String
+    , noteOptions2 : List String
     , computerNotes : List Int
     , playerNotes : List Int
     , computerNoteIndex : Int
@@ -51,7 +52,8 @@ type alias PlayBundle =
 
 
 model =
-    { noteOptions = [ "", "cq4", "d#q4", "fq4", "gq4", "a#q4", "cq6" ]
+    { noteOptions = [ "", "cq4", "d#q4", "fq4", "gq4", "a#q4", "cq5" ]
+    , noteOptions2 = [ "", "fq3", "gq3", "aq3", "cq3", "cq4", "eq4" ]
     , computerNotes = []
     , playerNotes = []
     , computerNoteIndex = 0
@@ -150,7 +152,7 @@ update msg model =
                             getAt (Maybe.withDefault 0 position) model.noteOptions
 
                         note2 =
-                            getAt (Maybe.withDefault 0 position2) model.noteOptions
+                            getAt (Maybe.withDefault 0 position) model.noteOptions2
                     in
                         ( { model | computerNoteIndex = model.computerNoteIndex +1, playersTurn = True, playerNoteIndex = 0}
                         , Cmd.batch [ send (PlayBundle (noteSorter <| Maybe.withDefault "cq4" note) (tempo model.bpm))
@@ -169,7 +171,7 @@ update msg model =
                         getAt (Maybe.withDefault 0 position)  model.noteOptions
 
                     note2 =
-                        getAt (Maybe.withDefault 0 position2) model.noteOptions
+                        getAt (Maybe.withDefault 0 position) model.noteOptions2
 
                 in
                     ( { model | playerNoteIndex = model.playerNoteIndex + 1, playersTurn = False }
