@@ -1,4 +1,4 @@
-port module Main exposing (..)
+ port module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -65,8 +65,8 @@ model =
     , playersTurn = False
     }
 
-
-init =
+.≥≥
+init =.
     ( model, Cmd.none )
 
 
@@ -296,6 +296,7 @@ tempo bpm =
     (Basics.toFloat 60 / Basics.toFloat bpm) * 0.5
 
 
+delayCmd : Cmd Msg
 delayCmd =
     Task.perform identity
         (Process.sleep (1 * Time.second)
@@ -334,9 +335,10 @@ colorNoteDiv index color =
         []
 
 
+score : { b | gameOn : Bool, score : a } -> Html msg
 score model =
     if
-        model.gameOn== True        
+        model.gameOn== True
     then
         h2 [ style [ ( "margin", "0 auto" ) ] ] [ text ("Score: " ++ Basics.toString model.score) ]
     else
