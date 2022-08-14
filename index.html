@@ -12,7 +12,7 @@
             app.ports.send.subscribe(play);
             app.ports.blink.subscribe(changeColor);
 
-            var ctx = new window.webkitAudioContext || window.AudioContext;
+            var ctx = new window.AudioContext || window.webkitAudioContext;
 
             function play(args) {   
                 var note = args.note;
